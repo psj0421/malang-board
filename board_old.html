@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐰 말랑 게시판</title>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --pink: #ffb6c9;
+      --pink-deep: #ff8fab;
+      --mint: #b8f2e6;
+      --cream: #fff8f0;
+      --brown: #6b4f4f;
+      --shadow: 0 6px 0 #f3c6d3;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Gowun Dodum', sans-serif;
+      background: var(--cream);
+      background-image: radial-gradient(#ffd6e0 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+      color: var(--brown);
+      min-height: 100vh;
+      padding: 40px 16px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+
+    header { text-align: center; margin-bottom: 28px; }
+    header h1 {
+      font-family: 'Jua', sans-serif;
+      font-size: 2.6rem;
+      color: var(--pink-deep);
+      text-shadow: 3px 3px 0 #fff;
+    }
+    header p { margin-top: 6px; }
+
+    .card {
+      background: #fff;
+      border: 3px solid var(--pink);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .card h2 { font-family: 'Jua', sans-serif; font-size: 1.4rem; margin-bottom: 16px; }
+
+    label { display: block; font-weight: bold; margin: 12px 0 6px; }
+    input, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px dashed var(--pink);
+      border-radius: 16px;
+      font-family: inherit;
+      font-size: 1rem;
+      color: var(--brown);
+      background: #fffafc;
+      outline: none;
+      transition: border-color .2s, background .2s;
+    }
+    input:focus, textarea:focus { border-style: solid; border-color: var(--pink-deep); background: #fff; }
+    textarea { min-height: 140px; resize: vertical; }
+    .row { display: flex; gap: 12px; }
+    .row > div { flex: 1; }
+
+    .btn {
+      font-family: 'Jua', sans-serif;
+      font-size: 1.05rem;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 22px;
+      cursor: pointer;
+      transition: transform .1s, box-shadow .1s;
+    }
+    .btn:active { transform: translateY(3px); }
+    .btn-pink { background: var(--pink-deep); color: #fff; box-shadow: 0 4px 0 #e0708f; }
+    .btn-mint { background: var(--mint); color: var(--brown); box-shadow: 0 4px 0 #8fd6c6; }
+    .btn-gray { background: #eee; color: var(--brown); box-shadow: 0 4px 0 #ccc; }
+    .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+
+    .list { list-style: none; }
+    .list li {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: background .15s, transform .15s;
+    }
+    .list li + li { margin-top: 6px; }
+    .list li:hover { background: #fff0f4; transform: translateX(4px); }
+    .list .title { font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .list .title::before { content: '🍓 '; }
+    .list .meta { font-size: .85rem; color: #a08888; white-space: nowrap; }
+
+    .empty { text-align: center; padding: 30px 0; color: #b09a9a; }
+    .empty .bunny { font-size: 3rem; display: block; margin-bottom: 8px; animation: hop 1.2s infinite; }
+    @keyframes hop { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+    /* 글 보기 모달 */
+    .modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(107, 79, 79, .35);
+      display: none; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .modal-bg.show { display: flex; }
+    .modal { max-width: 600px; width: 100%; max-height: 85vh; overflow-y: auto; margin: 0; }
+    .modal .meta { font-size: .9rem; color: #a08888; margin-bottom: 16px; }
+    .modal .content { white-space: pre-wrap; line-height: 1.7; }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--brown); color: #fff;
+      padding: 10px 20px; border-radius: 999px;
+      opacity: 0; transition: opacity .3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 520px) {
+      .row { flex-direction: column; gap: 0; }
+      .list li { flex-direction: column; align-items: flex-start; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🐰 말랑 게시판</h1>
+      <p>오늘 있었던 일을 살포시 남겨 주세요 ✨</p>
+    </header>
+
+    <!-- 글쓰기 폼 -->
+    <section class="card">
+      <h2>✏️ 새 글 쓰기</h2>
+      <form id="postForm">
+        <div class="row">
+          <div>
+            <label for="title">제목</label>
+            <input id="title" name="title" maxlength="100" placeholder="제목을 적어 주세요" required />
+          </div>
+          <div>
+            <label for="author">이름</label>
+            <input id="author" name="author" maxlength="30" placeholder="닉네임" required />
+          </div>
+        </div>
+        <label for="content">내용</label>
+        <textarea id="content" name="content" placeholder="하고 싶은 이야기를 적어 주세요" required></textarea>
+        <div class="actions">
+          <button type="reset" class="btn btn-gray">지우기</button>
+          <button type="submit" class="btn btn-pink">등록하기 💌</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 글 목록 -->
+    <section class="card">
+      <h2>📋 글 목록</h2>
+      <ul id="postList" class="list"></ul>
+    </section>
+  </div>
+
+  <!-- 글 보기 모달 -->
+  <div id="modalBg" class="modal-bg">
+    <div class="card modal">
+      <h2 id="mTitle"></h2>
+      <p id="mMeta" class="meta"></p>
+      <p id="mContent" class="content"></p>
+      <div class="actions">
+        <button id="deleteBtn" class="btn btn-gray">삭제 🗑️</button>
+        <button id="closeBtn" class="btn btn-mint">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const listEl = document.getElementById('postList');
+    const form = document.getElementById('postForm');
+    const modalBg = document.getElementById('modalBg');
+    let currentId = null;
+
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    // 글 목록 불러오기
+    async function loadPosts() {
+      try {
+        const res = await fetch('/api/posts');
+        const posts = await res.json();
+        listEl.innerHTML = '';
+
+        if (!res.ok) throw new Error(posts.message);
+
+        if (posts.length === 0) {
+          listEl.innerHTML =
+            '<div class="empty"><span class="bunny">🐇</span>아직 글이 없어요. 첫 글을 남겨 주세요!</div>';
+          return;
+        }
+
+        posts.forEach(p => {
+          const li = document.createElement('li');
+          const title = document.createElement('span');
+          const meta = document.createElement('span');
+          title.className = 'title';
+          meta.className = 'meta';
+          // textContent 를 쓰면 사용자가 넣은 HTML/스크립트가 실행되지 않아요 (XSS 방지)
+          title.textContent = p.title;
+          meta.textContent = `${p.author} · ${p.created_at.slice(0, 16)}`;
+          li.append(title, meta);
+          li.addEventListener('click', () => openPost(p.id));
+          listEl.appendChild(li);
+        });
+      } catch (err) {
+        listEl.innerHTML = '<div class="empty">😿 서버에 연결하지 못했어요.</div>';
+      }
+    }
+
+    // 글쓰기
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(form));
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (!res.ok) return toast(result.message);
+      form.reset();
+      toast('글이 등록됐어요 💖');
+      loadPosts();
+    });
+
+    // 글 보기
+    async function openPost(id) {
+      const res = await fetch(`/api/posts/${id}`);
+      const p = await res.json();
+      if (!res.ok) return toast(p.message);
+      currentId = id;
+      document.getElementById('mTitle').textContent = p.title;
+      document.getElementById('mMeta').textContent = `✍️ ${p.author} · ${p.created_at}`;
+      document.getElementById('mContent').textContent = p.content;
+      modalBg.classList.add('show');
+    }
+
+    function closeModal() {
+      modalBg.classList.remove('show');
+      currentId = null;
+    }
+
+    document.getElementById('closeBtn').addEventListener('click', closeModal);
+    modalBg.addEventListener('click', e => { if (e.target === modalBg) closeModal(); });
+
+    // 글 삭제
+    document.getElementById('deleteBtn').addEventListener('click', async () => {
+      if (currentId === null) return;
+      const res = await fetch(`/api/posts/${currentId}`, { method: 'DELETE' });
+      if (!res.ok) return toast('삭제하지 못했어요 😢');
+      closeModal();
+      toast('글을 지웠어요');
+      loadPosts();
+    });
+
+    loadPosts();
+  </script>
+</body>
+</html>
